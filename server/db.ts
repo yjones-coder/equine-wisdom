@@ -1,11 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, like, or, sql, desc, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, breeds, horseFacts, identificationHistory, type Breed, type HorseFact, type InsertBreed, type InsertHorseFact, type InsertIdentificationHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -18,6 +17,7 @@ export async function getDb() {
   return _db;
 }
 
+// User queries
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
@@ -85,8 +85,122 @@ export async function getUserByOpenId(openId: string) {
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Breed queries
+export async function getAllBreeds() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(breeds).orderBy(asc(breeds.name));
+  return result;
+}
+
+export async function getBreedBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(breeds).where(eq(breeds.slug, slug)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getBreedById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(breeds).where(eq(breeds.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function searchBreeds(query: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const searchTerm = `%${query}%`;
+  const result = await db.select().from(breeds).where(
+    or(
+      like(breeds.name, searchTerm),
+      like(breeds.overview, searchTerm),
+      like(breeds.distinctiveFeatures, searchTerm)
+    )
+  ).orderBy(asc(breeds.name));
+  
+  return result;
+}
+
+export async function getBreedsByCategory(category: Breed['category']) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(breeds).where(eq(breeds.category, category)).orderBy(asc(breeds.name));
+  return result;
+}
+
+export async function getPopularBreeds(limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(breeds)
+    .where(eq(breeds.popularity, 'common'))
+    .orderBy(asc(breeds.name))
+    .limit(limit);
+  return result;
+}
+
+// Horse facts queries
+export async function getAllFacts() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(horseFacts).orderBy(desc(horseFacts.createdAt));
+  return result;
+}
+
+export async function getFactsByCategory(category: HorseFact['category']) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(horseFacts).where(eq(horseFacts.category, category));
+  return result;
+}
+
+export async function getFactsByAudienceLevel(level: HorseFact['audienceLevel']) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(horseFacts).where(
+    or(
+      eq(horseFacts.audienceLevel, level),
+      eq(horseFacts.audienceLevel, 'all')
+    )
+  );
+  return result;
+}
+
+export async function getRandomFacts(limit: number = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(horseFacts).orderBy(sql`RAND()`).limit(limit);
+  return result;
+}
+
+// Identification history queries
+export async function saveIdentificationHistory(data: InsertIdentificationHistory) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.insert(identificationHistory).values(data);
+  return result;
+}
+
+export async function getUserIdentificationHistory(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(identificationHistory)
+    .where(eq(identificationHistory.userId, userId))
+    .orderBy(desc(identificationHistory.createdAt));
+  return result;
+}
