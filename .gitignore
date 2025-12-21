@@ -100,8 +100,44 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+.tmp/
+
+# OS and system files
+.env.*.example
+.env.example
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
+
+# Sensitive files
+.env.*.local
+*.pem
+*.key
+*.crt
+*.pfx
+
+# Secrets and credentials
+secrets/
+.secrets/
+credentials.json
+
+# Local development
+.local
+.env.local
+
+# Manus specific
+.gdrive-rclone.ini
+.manus-secrets
+
+# Build and deployment
+dist/
+build/
+.vercel/
+.netlify/
+
+# IDE specific
+.vscode/settings.json
+.idea/
+*.iml
