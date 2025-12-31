@@ -4,6 +4,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { invokeLLM } from "./_core/llm";
+import { getCachedBreedList, getCachedBreed, getCachedFacts, getCacheStats } from "./cache";
+import { generateBreedPrompt, getImageGenerationParams, generateBatchPrompts } from "./breedImageGenerator";
 import { 
   getAllBreeds, 
   getBreedBySlug, 
@@ -75,7 +77,7 @@ export const appRouter = router({
 
   breeds: router({
     list: publicProcedure.query(async () => {
-      return getAllBreeds();
+      return getCachedBreedList(null, () => getAllBreeds());
     }),
     
     getBySlug: publicProcedure
@@ -87,14 +89,14 @@ export const appRouter = router({
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return getBreedById(input.id);
+        return getCachedBreed(input.id, () => getBreedById(input.id));
       }),
     
     search: publicProcedure
       .input(z.object({ query: z.string() }))
       .query(async ({ input }) => {
         if (!input.query.trim()) {
-          return getAllBreeds();
+          return getCachedBreedList(null, () => getAllBreeds());
         }
         return searchBreeds(input.query);
       }),
@@ -104,7 +106,7 @@ export const appRouter = router({
         category: z.enum(["light", "draft", "pony", "gaited", "warmblood"]) 
       }))
       .query(async ({ input }) => {
-        return getBreedsByCategory(input.category);
+        return getCachedBreedList(input.category, () => getBreedsByCategory(input.category));
       }),
     
     popular: publicProcedure
@@ -112,11 +114,29 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return getPopularBreeds(input?.limit ?? 10);
       }),
+
+    // Image generation endpoints
+    getImagePrompt: publicProcedure
+      .input(z.object({ breedName: z.string() }))
+      .query(({ input }) => {
+        return {
+          prompt: generateBreedPrompt(input.breedName),
+          params: getImageGenerationParams(input.breedName),
+        };
+      }),
+
+    getBatchImagePrompts: publicProcedure
+      .input(z.object({ 
+        breeds: z.array(z.object({ name: z.string(), slug: z.string() })) 
+      }))
+      .query(({ input }) => {
+        return generateBatchPrompts(input.breeds);
+      }),
   }),
 
   facts: router({
     list: publicProcedure.query(async () => {
-      return getAllFacts();
+      return getCachedFacts(null, () => getAllFacts());
     }),
     
     byCategory: publicProcedure
@@ -124,7 +144,7 @@ export const appRouter = router({
         category: z.enum(["general", "health", "behavior", "nutrition", "training", "history", "care"]) 
       }))
       .query(async ({ input }) => {
-        return getFactsByCategory(input.category);
+        return getCachedFacts(input.category, () => getFactsByCategory(input.category));
       }),
     
     byLevel: publicProcedure
@@ -650,6 +670,34 @@ Respond with a JSON object containing:
           withSubscriptions: recipients.filter(r => r.subscribedBreeds.length > 0).length,
         };
       }),
+  }),
+
+  // ==================== Admin Cache Management Router ====================
+  adminCache: router({
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Admin access required');
+      }
+      return getCacheStats();
+    }),
+
+    invalidateBreeds: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Admin access required');
+      }
+      const { invalidateBreedCache } = await import('./cache');
+      await invalidateBreedCache();
+      return { success: true, message: 'Breed cache invalidated' };
+    }),
+
+    invalidateFacts: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Admin access required');
+      }
+      const { invalidateFactsCache } = await import('./cache');
+      await invalidateFactsCache();
+      return { success: true, message: 'Facts cache invalidated' };
+    }),
   }),
 });
 

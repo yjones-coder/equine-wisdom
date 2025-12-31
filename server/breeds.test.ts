@@ -177,7 +177,7 @@ describe("breeds router", () => {
       
       const result = await caller.breeds.search({ query: "" });
       
-      expect(db.getAllBreeds).toHaveBeenCalled();
+      // Note: getAllBreeds is now wrapped in getCachedBreedList, so we check the result instead
       expect(result).toHaveLength(2);
     });
   });

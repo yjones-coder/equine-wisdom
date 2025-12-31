@@ -165,3 +165,19 @@
 - [ ] Premium stable features
 - [ ] Advanced analytics
 - [ ] Priority support
+
+
+## Phase 5: Cloudflare & Hugging Face Integration
+
+### Cloudflare KV Caching
+- [x] Set up Cloudflare account and KV namespace
+- [x] Implement breed data caching
+- [x] Cache popular search results
+- [x] Add cache invalidation logic
+
+### Hugging Face Integration
+- [x] Research relevant AI models for horse/equine domain
+- [x] Evaluate image classification models for horse breed identification
+- [x] Explore text models for improved breed matching
+- [x] Integrate Z-Image Turbo for breed image generation
+- [x] Add breed image prompt generation endpoints
