@@ -37,3 +37,131 @@
 - [x] AI breed identification procedure
 - [x] Horse facts procedures
 - [x] Unit tests for core procedures
+
+
+## Phase 2: User Features & Virtual Stables
+
+### Database Schema
+- [x] Create stables table
+- [x] Create horses table
+- [x] Create searchHistory table
+- [x] Create userPreferences table
+- [x] Add proper indexes for performance
+
+### Virtual Stable Features
+- [x] Stable creation and management
+- [x] Add/edit horse profiles
+- [ ] Horse photo upload to S3
+- [x] Stable dashboard page
+- [x] Horse detail page
+
+### Search History & Persistence
+- [x] Track breed identification history
+- [x] Store search queries
+- [x] Display recent searches
+- [x] Allow re-running previous searches
+- [ ] Search analytics dashboard
+
+### User Dashboard
+- [x] Dashboard layout and design
+- [x] Display user's stables
+- [x] Show recent identifications
+- [x] Display favorite breeds
+- [ ] Personalized recommendations
+
+### Authentication & Profile
+- [x] User profile page
+- [ ] Profile editing
+- [x] Account settings
+- [ ] Password/security management
+- [x] User preferences (notifications, newsletter)
+
+## Phase 3: Scalability Infrastructure
+
+### Caching & Performance
+- [ ] Implement KV store caching for breeds
+- [ ] Cache popular searches
+- [ ] Cache user preferences
+- [ ] Add pagination to list endpoints
+- [ ] Implement cursor-based pagination
+
+### Database Optimization
+- [ ] Add critical indexes
+- [ ] Implement connection pooling
+- [ ] Set up query monitoring
+- [ ] Optimize slow queries
+- [ ] Implement database backups
+
+### Monitoring & Alerts
+- [ ] Set up performance monitoring
+- [ ] Add error tracking
+- [ ] Create alerting system
+- [ ] Implement usage analytics
+- [ ] Create admin dashboard
+
+### Load Testing
+- [ ] Set up load testing environment
+- [ ] Test with 10k concurrent users
+- [ ] Identify bottlenecks
+- [ ] Optimize critical paths
+- [ ] Document scaling procedures
+
+## Phase 4: Newsletter & Notifications
+
+### Email System
+- [x] Set up Gmail/Outlook integration
+- [x] Create email templates
+- [ ] Implement newsletter scheduler
+- [x] Add unsubscribe functionality
+- [ ] Track email metrics
+
+### Notifications
+- [ ] In-app notification system
+- [ ] Email notifications
+- [ ] Push notifications (future)
+- [ ] Notification preferences
+- [ ] Notification history
+
+### Personalized Content
+- [x] Generate breed-specific news
+- [x] Create care reminders
+- [ ] Suggest relevant articles
+- [ ] Track user interests
+- [ ] A/B test newsletter content
+
+### Horse News Feed
+- [ ] Integrate horse news sources
+- [ ] Create news aggregation
+- [ ] Filter by breed/topic
+- [ ] Personalize feed
+- [ ] Add news sharing
+
+## Phase 5: Advanced Features
+
+### Content Management
+- [ ] Integrate Airtable for content
+- [ ] Create content admin panel
+- [ ] Implement content versioning
+- [ ] Add content scheduling
+- [ ] Create content approval workflow
+
+### Analytics
+- [ ] User engagement tracking
+- [ ] Feature usage analytics
+- [ ] Conversion funnel tracking
+- [ ] Cohort analysis
+- [ ] Custom report builder
+
+### Community Features
+- [ ] User profiles and following
+- [ ] Stable sharing
+- [ ] Comments and discussions
+- [ ] User-generated content
+- [ ] Leaderboards and achievements
+
+### Premium Features
+- [ ] Stripe integration
+- [ ] Subscription plans
+- [ ] Premium stable features
+- [ ] Advanced analytics
+- [ ] Priority support

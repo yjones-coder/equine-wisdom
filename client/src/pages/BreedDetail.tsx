@@ -3,16 +3,59 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Ruler, Weight, MapPin, Clock, Heart, Stethoscope, Apple, Dumbbell } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { ArrowLeft, Ruler, Weight, MapPin, Clock, Heart, Stethoscope, Apple, Dumbbell, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function BreedDetail() {
   const params = useParams<{ slug: string }>();
+  const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
+  
   const { data: breed, isLoading, error } = trpc.breeds.getBySlug.useQuery(
     { slug: params.slug || "" },
     { enabled: !!params.slug }
   );
+
+  const { data: isSaved, isLoading: isSavedLoading } = trpc.savedBreeds.isSaved.useQuery(
+    { breedId: breed?.id || 0 },
+    { enabled: isAuthenticated && !!breed?.id }
+  );
+
+  const saveBreed = trpc.savedBreeds.save.useMutation({
+    onSuccess: () => {
+      toast.success("Breed saved to your collection!");
+      utils.savedBreeds.isSaved.invalidate({ breedId: breed?.id });
+      utils.savedBreeds.list.invalidate();
+      utils.dashboard.stats.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to save breed");
+    },
+  });
+
+  const removeSavedBreed = trpc.savedBreeds.remove.useMutation({
+    onSuccess: () => {
+      toast.success("Breed removed from saved");
+      utils.savedBreeds.isSaved.invalidate({ breedId: breed?.id });
+      utils.savedBreeds.list.invalidate();
+      utils.dashboard.stats.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to remove breed");
+    },
+  });
+
+  const handleToggleSave = () => {
+    if (!breed?.id) return;
+    
+    if (isSaved) {
+      removeSavedBreed.mutate({ breedId: breed.id });
+    } else {
+      saveBreed.mutate({ breedId: breed.id });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -53,16 +96,36 @@ export default function BreedDetail() {
     );
   }
 
+  const isSaving = saveBreed.isPending || removeSavedBreed.isPending;
+
   return (
     <div className="py-8 md:py-16">
       <div className="container max-w-4xl">
         {/* Back Button */}
-        <Link href="/breeds">
-          <Button variant="ghost" size="sm" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Breeds
-          </Button>
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link href="/breeds">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Breeds
+            </Button>
+          </Link>
+          
+          {isAuthenticated && (
+            <Button
+              variant={isSaved ? "secondary" : "outline"}
+              size="sm"
+              onClick={handleToggleSave}
+              disabled={isSaving || isSavedLoading}
+            >
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Heart className={`mr-2 h-4 w-4 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
+              )}
+              {isSaved ? "Saved" : "Save Breed"}
+            </Button>
+          )}
+        </div>
 
         {/* Header */}
         <div className="mb-8">

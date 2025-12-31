@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, boolean, index, unique } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -92,3 +92,178 @@ export const identificationHistory = mysqlTable("identificationHistory", {
 
 export type IdentificationHistory = typeof identificationHistory.$inferSelect;
 export type InsertIdentificationHistory = typeof identificationHistory.$inferInsert;
+
+/**
+ * Virtual stables - users can create multiple stables to organize their horses
+ */
+export const stables = mysqlTable("stables", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  location: varchar("location", { length: 255 }),
+  capacity: int("capacity").default(10),
+  imageUrl: text("imageUrl"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("stables_userId_idx").on(table.userId),
+  uniqueUserStableName: unique("unique_user_stable_name").on(table.userId, table.name),
+}));
+
+export type Stable = typeof stables.$inferSelect;
+export type InsertStable = typeof stables.$inferInsert;
+
+/**
+ * Horses - individual horses belonging to stables
+ */
+export const horses = mysqlTable("horses", {
+  id: int("id").autoincrement().primaryKey(),
+  stableId: int("stableId").notNull().references(() => stables.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  
+  // Breed information
+  breedId: int("breedId").references(() => breeds.id),
+  matchedBreedId: int("matchedBreedId").references(() => breeds.id),
+  matchConfidence: int("matchConfidence"),
+  identificationDescription: text("identificationDescription"),
+  
+  // Horse details
+  age: int("age"),
+  gender: mysqlEnum("gender", ["mare", "stallion", "gelding", "colt", "filly", "unknown"]).default("unknown"),
+  color: varchar("color", { length: 100 }),
+  markings: text("markings"),
+  height: int("height"), // in hands
+  weight: int("weight"), // in pounds
+  
+  // Care information
+  notes: text("notes"),
+  specialNeeds: text("specialNeeds"),
+  feedingSchedule: text("feedingSchedule"),
+  veterinarian: varchar("veterinarian", { length: 255 }),
+  farrier: varchar("farrier", { length: 255 }),
+  
+  // Photos (stored as S3 URLs)
+  photoUrls: json("photoUrls").$type<string[]>(),
+  profilePhotoUrl: text("profilePhotoUrl"),
+  
+  // Dates
+  dateOfBirth: timestamp("dateOfBirth"),
+  dateAcquired: timestamp("dateAcquired"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("horses_userId_idx").on(table.userId),
+  stableIdIdx: index("horses_stableId_idx").on(table.stableId),
+  breedIdIdx: index("horses_breedId_idx").on(table.breedId),
+}));
+
+export type Horse = typeof horses.$inferSelect;
+export type InsertHorse = typeof horses.$inferInsert;
+
+/**
+ * Search history - tracks user's breed searches and identifications
+ */
+export const searchHistory = mysqlTable("searchHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  searchType: mysqlEnum("searchType", ["breed_search", "identification", "browse"]).notNull(),
+  query: varchar("query", { length: 500 }),
+  category: varchar("category", { length: 50 }),
+  filters: json("filters").$type<Record<string, unknown>>(),
+  resultsCount: int("resultsCount"),
+  selectedBreedId: int("selectedBreedId").references(() => breeds.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdCreatedAtIdx: index("searchHistory_userId_createdAt_idx").on(table.userId, table.createdAt),
+}));
+
+export type SearchHistory = typeof searchHistory.$inferSelect;
+export type InsertSearchHistory = typeof searchHistory.$inferInsert;
+
+/**
+ * User preferences - notification settings, favorites, and personalization
+ */
+export const userPreferences = mysqlTable("userPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Notification preferences
+  emailNotifications: boolean("emailNotifications").default(true),
+  newsletterFrequency: mysqlEnum("newsletterFrequency", ["daily", "weekly", "monthly", "never"]).default("weekly"),
+  careReminders: boolean("careReminders").default(true),
+  newsAlerts: boolean("newsAlerts").default(true),
+  
+  // Content preferences
+  favoriteCategories: json("favoriteCategories").$type<string[]>(),
+  experienceLevel: mysqlEnum("experienceLevel", ["beginner", "intermediate", "advanced"]).default("beginner"),
+  
+  // Display preferences
+  theme: mysqlEnum("theme", ["light", "dark", "system"]).default("system"),
+  measurementUnit: mysqlEnum("measurementUnit", ["imperial", "metric"]).default("imperial"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type InsertUserPreferences = typeof userPreferences.$inferInsert;
+
+/**
+ * Saved breeds - users can save breeds they're interested in
+ */
+export const savedBreeds = mysqlTable("savedBreeds", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  breedId: int("breedId").notNull().references(() => breeds.id, { onDelete: "cascade" }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("savedBreeds_userId_idx").on(table.userId),
+  uniqueUserBreed: unique("unique_user_breed").on(table.userId, table.breedId),
+}));
+
+export type SavedBreed = typeof savedBreeds.$inferSelect;
+export type InsertSavedBreed = typeof savedBreeds.$inferInsert;
+
+/**
+ * Horse care logs - track care activities for horses
+ */
+export const careLogs = mysqlTable("careLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  horseId: int("horseId").notNull().references(() => horses.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  careType: mysqlEnum("careType", ["feeding", "grooming", "exercise", "veterinary", "farrier", "medication", "other"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  date: timestamp("date").notNull(),
+  cost: int("cost"), // in cents
+  nextDueDate: timestamp("nextDueDate"),
+  reminderSet: boolean("reminderSet").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  horseIdIdx: index("careLogs_horseId_idx").on(table.horseId),
+  userIdIdx: index("careLogs_userId_idx").on(table.userId),
+  dateIdx: index("careLogs_date_idx").on(table.date),
+}));
+
+export type CareLog = typeof careLogs.$inferSelect;
+export type InsertCareLog = typeof careLogs.$inferInsert;
+
+/**
+ * Newsletter subscriptions - track breed-specific newsletter preferences
+ */
+export const newsletterSubscriptions = mysqlTable("newsletterSubscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  breedId: int("breedId").references(() => breeds.id, { onDelete: "cascade" }),
+  category: varchar("category", { length: 50 }), // general, health, training, etc.
+  isActive: boolean("isActive").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("newsletterSubs_userId_idx").on(table.userId),
+}));
+
+export type NewsletterSubscription = typeof newsletterSubscriptions.$inferSelect;
+export type InsertNewsletterSubscription = typeof newsletterSubscriptions.$inferInsert;

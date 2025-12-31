@@ -2,12 +2,13 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { Menu, X, User, LogOut } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, Warehouse, Heart, Settings } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -18,8 +19,15 @@ const navLinks = [
   { href: "/learn", label: "Learn" },
 ];
 
+const userMenuLinks = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/stables", label: "My Stables", icon: Warehouse },
+  { href: "/saved-breeds", label: "Saved Breeds", icon: Heart },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
 export default function Header() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, isAuthenticated, logout, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -48,6 +56,16 @@ export default function Header() {
               </Button>
             </Link>
           ))}
+          {isAuthenticated && (
+            <Link href="/dashboard">
+              <Button
+                variant={location.startsWith("/dashboard") || location.startsWith("/stables") ? "secondary" : "ghost"}
+                className="text-sm font-medium"
+              >
+                Dashboard
+              </Button>
+            </Link>
+          )}
         </nav>
 
         {/* Auth & Mobile Menu */}
@@ -62,11 +80,23 @@ export default function Header() {
                       <User className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem disabled className="text-muted-foreground">
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem disabled className="text-muted-foreground font-medium">
                       {user?.name || user?.email || "User"}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => logout()}>
+                    <DropdownMenuSeparator />
+                    {userMenuLinks.map((link) => (
+                      <DropdownMenuItem 
+                        key={link.href} 
+                        onClick={() => navigate(link.href)}
+                        className="cursor-pointer"
+                      >
+                        <link.icon className="mr-2 h-4 w-4" />
+                        {link.label}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign out
                     </DropdownMenuItem>
@@ -112,6 +142,37 @@ export default function Header() {
                 </Button>
               </Link>
             ))}
+            
+            {isAuthenticated && (
+              <>
+                <div className="border-t border-border my-2" />
+                <p className="text-xs text-muted-foreground px-4 py-1">My Account</p>
+                {userMenuLinks.map((link) => (
+                  <Link key={link.href} href={link.href}>
+                    <Button
+                      variant={location === link.href ? "secondary" : "ghost"}
+                      className="w-full justify-start"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <link.icon className="mr-2 h-4 w-4" />
+                      {link.label}
+                    </Button>
+                  </Link>
+                ))}
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-destructive hover:text-destructive"
+                  onClick={() => {
+                    logout();
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </Button>
+              </>
+            )}
+            
             {!isAuthenticated && !loading && (
               <Button
                 variant="outline"
