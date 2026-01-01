@@ -140,7 +140,23 @@ export const horses = mysqlTable("horses", {
   // Care information
   notes: text("notes"),
   specialNeeds: text("specialNeeds"),
-  feedingSchedule: text("feedingSchedule"),
+  feedingSchedule: text("feedingSchedule"), // Legacy text field
+  feedingScheduleData: json("feedingScheduleData").$type<{
+    type: "2x_daily" | "3x_daily" | "4x_daily" | "custom";
+    slots: {
+      id: string;
+      name: string;
+      time: string;
+      icon: string;
+      hay: { amount: number; unit: string };
+      grain: { amount: number; unit: string; type: string };
+      supplements: string[];
+      water: boolean;
+      notes: string;
+    }[];
+    weeklyVariations: boolean;
+    variations: unknown[];
+  }>(),
   veterinarian: varchar("veterinarian", { length: 255 }),
   farrier: varchar("farrier", { length: 255 }),
   

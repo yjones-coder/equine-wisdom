@@ -181,3 +181,20 @@
 - [x] Explore text models for improved breed matching
 - [x] Integrate Z-Image Turbo for breed image generation
 - [x] Add breed image prompt generation endpoints
+
+
+## Phase 6: Feeding Schedule Calendar Enhancement
+
+### Research
+- [ ] Research best UX patterns for recurring schedule input
+- [ ] Research horse feeding schedule requirements and categories
+- [ ] Evaluate calendar component options (react-day-picker, etc.)
+
+### Implementation
+- [x] Redesign feeding schedule section in Add Horse form
+- [x] Implement calendar-based schedule picker
+- [x] Create categorized feeding input fields (hay, grain, supplements, etc.)
+- [x] Add time-based feeding slots (morning, noon, evening)
+- [x] Update database schema for detailed feeding schedules
+- [x] Create backend procedures for feeding schedule management
+- [x] Write tests for new functionality

@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useLocation, useParams } from "wouter";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronDown } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import { FeedingScheduleBuilder, type FeedingSchedule } from "@/components/FeedingScheduleBuilder";
 
 // Horse icon component
 function HorseIcon({ className }: { className?: string }) {
@@ -21,6 +23,48 @@ function HorseIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+// Default feeding schedule
+const DEFAULT_FEEDING_SCHEDULE: FeedingSchedule = {
+  type: "3x_daily",
+  slots: [
+    {
+      id: "morning",
+      name: "Morning Feeding",
+      time: "06:00",
+      icon: "morning",
+      hay: { amount: 3, unit: "flakes" },
+      grain: { amount: 2, unit: "lbs", type: "" },
+      supplements: [],
+      water: true,
+      notes: "",
+    },
+    {
+      id: "noon",
+      name: "Noon Feeding",
+      time: "12:00",
+      icon: "noon",
+      hay: { amount: 2, unit: "flakes" },
+      grain: { amount: 0, unit: "lbs", type: "" },
+      supplements: [],
+      water: true,
+      notes: "",
+    },
+    {
+      id: "evening",
+      name: "Evening Feeding",
+      time: "18:00",
+      icon: "evening",
+      hay: { amount: 3, unit: "flakes" },
+      grain: { amount: 2, unit: "lbs", type: "" },
+      supplements: [],
+      water: true,
+      notes: "",
+    },
+  ],
+  weeklyVariations: false,
+  variations: [],
+};
 
 export default function NewHorse() {
   const { stableId: stableIdParam } = useParams<{ stableId: string }>();
@@ -47,10 +91,12 @@ export default function NewHorse() {
     weight: undefined as number | undefined,
     notes: "",
     specialNeeds: "",
-    feedingSchedule: "",
     veterinarian: "",
     farrier: "",
   });
+
+  const [feedingSchedule, setFeedingSchedule] = useState<FeedingSchedule>(DEFAULT_FEEDING_SCHEDULE);
+  const [feedingExpanded, setFeedingExpanded] = useState(true);
 
   const createHorse = trpc.horses.create.useMutation({
     onSuccess: (data) => {
@@ -93,6 +139,11 @@ export default function NewHorse() {
       return;
     }
 
+    // Generate a text summary of the feeding schedule for legacy field
+    const feedingSummary = feedingSchedule.slots
+      .map(slot => `${slot.name}: ${slot.time} - Hay: ${slot.hay.amount} ${slot.hay.unit}, Grain: ${slot.grain.amount} ${slot.grain.unit}${slot.supplements.length > 0 ? `, Supplements: ${slot.supplements.join(", ")}` : ""}`)
+      .join("; ");
+
     createHorse.mutate({
       stableId,
       name: formData.name.trim(),
@@ -105,14 +156,15 @@ export default function NewHorse() {
       weight: formData.weight,
       notes: formData.notes.trim() || undefined,
       specialNeeds: formData.specialNeeds.trim() || undefined,
-      feedingSchedule: formData.feedingSchedule.trim() || undefined,
+      feedingSchedule: feedingSummary,
+      feedingScheduleData: feedingSchedule,
       veterinarian: formData.veterinarian.trim() || undefined,
       farrier: formData.farrier.trim() || undefined,
     });
   };
 
   return (
-    <div className="container py-8 max-w-2xl">
+    <div className="container py-8 max-w-3xl">
       {/* Back Button */}
       <Button variant="ghost" className="mb-6" asChild>
         <Link href={`/stables/${stableId}`}>
@@ -121,22 +173,23 @@ export default function NewHorse() {
         </Link>
       </Button>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
-              <HorseIcon className="w-6 h-6 text-amber-700" />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                <HorseIcon className="w-6 h-6 text-amber-700" />
+              </div>
+              <div>
+                <CardTitle>Add New Horse</CardTitle>
+                <CardDescription>
+                  Add a horse to {stable?.name || "your stable"}
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle>Add New Horse</CardTitle>
-              <CardDescription>
-                Add a horse to {stable?.name || "your stable"}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          </CardHeader>
+          <CardContent className="space-y-6">
             {/* Basic Info */}
             <div className="space-y-4">
               <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Basic Information</h3>
@@ -266,53 +319,77 @@ export default function NewHorse() {
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Care Information */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Care Information</h3>
-              
+        {/* Feeding Schedule Card */}
+        <Card>
+          <Collapsible open={feedingExpanded} onOpenChange={setFeedingExpanded}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      🌾 Feeding Schedule
+                    </CardTitle>
+                    <CardDescription>
+                      Set up your horse's daily feeding routine with times, amounts, and supplements
+                    </CardDescription>
+                  </div>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${feedingExpanded ? "rotate-180" : ""}`} />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <FeedingScheduleBuilder
+                  value={feedingSchedule}
+                  onChange={setFeedingSchedule}
+                />
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Care & Contact Information Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Care & Contact Information</CardTitle>
+            <CardDescription>
+              Special needs and care provider contacts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="specialNeeds">Special Needs</Label>
+              <Textarea
+                id="specialNeeds"
+                placeholder="Any medical conditions, allergies, or special care requirements"
+                value={formData.specialNeeds}
+                onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="feedingSchedule">Feeding Schedule</Label>
-                <Textarea
-                  id="feedingSchedule"
-                  placeholder="Describe feeding times, amounts, and any dietary requirements"
-                  value={formData.feedingSchedule}
-                  onChange={(e) => setFormData({ ...formData, feedingSchedule: e.target.value })}
-                  rows={2}
+                <Label htmlFor="veterinarian">Veterinarian</Label>
+                <Input
+                  id="veterinarian"
+                  placeholder="Vet name or clinic"
+                  value={formData.veterinarian}
+                  onChange={(e) => setFormData({ ...formData, veterinarian: e.target.value })}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="specialNeeds">Special Needs</Label>
-                <Textarea
-                  id="specialNeeds"
-                  placeholder="Any medical conditions, allergies, or special care requirements"
-                  value={formData.specialNeeds}
-                  onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })}
-                  rows={2}
+                <Label htmlFor="farrier">Farrier</Label>
+                <Input
+                  id="farrier"
+                  placeholder="Farrier name"
+                  value={formData.farrier}
+                  onChange={(e) => setFormData({ ...formData, farrier: e.target.value })}
                 />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="veterinarian">Veterinarian</Label>
-                  <Input
-                    id="veterinarian"
-                    placeholder="Vet name or clinic"
-                    value={formData.veterinarian}
-                    onChange={(e) => setFormData({ ...formData, veterinarian: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="farrier">Farrier</Label>
-                  <Input
-                    id="farrier"
-                    placeholder="Farrier name"
-                    value={formData.farrier}
-                    onChange={(e) => setFormData({ ...formData, farrier: e.target.value })}
-                  />
-                </div>
               </div>
             </div>
 
@@ -327,34 +404,35 @@ export default function NewHorse() {
                 rows={3}
               />
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="flex gap-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => navigate(`/stables/${stableId}`)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={createHorse.isPending}
-              >
-                {createHorse.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Adding...
-                  </>
-                ) : (
-                  "Add Horse"
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Submit Buttons */}
+        <div className="flex gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => navigate(`/stables/${stableId}`)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="flex-1"
+            disabled={createHorse.isPending}
+          >
+            {createHorse.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              "Add Horse"
+            )}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
